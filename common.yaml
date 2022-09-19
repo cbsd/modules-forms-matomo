@@ -1,0 +1,246 @@
+timezone::timezone: #timezone#
+
+
+# Matomo for 8.1, not for 8.2: 2022-09
+php::globals:
+  php_version: 8.1
+
+php::ensure: installed
+php::manage_repos: true
+php::package_prefix: php81-
+php::fpm: true
+php::dev: true
+php::composer: true
+php::pear: false
+php::phpunit: false
+php::fpm::config::log_level: error
+php::composer::auto_update: true
+php::settings:
+  PHP/error_log: /var/log/nginx/php.err
+  PHP/user_ini.cache_ttl: 900
+  PHP/realpath_cache_size: 1m
+  PHP/realpath_cache_ttl: 900
+  PHP/memory_limit: #php_memory_limit#
+  PHP/max_input_time: #php_max_input_time#
+  PHP/post_max_size: #php_post_max_size#
+  PHP/upload_max_filesize: #php_upload_max_filesize#
+  PHP/always_populate_raw_post_data: '-1'
+  PHP/session.auto_start: 0
+  PHP/max_execution_time: #php_max_execution_time#
+  Date/date.timezone: #timezone#
+  opcache/opcache.enable: 1
+  opcache/opcache.enable_cli: 1
+  opcache/opcache.memory_consumption: #php_opcache_memory_consumption#
+
+php::cli::settings:
+  PHP/memory_limit: 512M
+  PHP/max_input_time: 300
+  PHP/post_max_size: 32M
+  PHP/upload_max_filesize: 32M
+  PHP/always_populate_raw_post_data: '-1'
+  PHP/session.auto_start: 0
+  PHP/max_execution_time: 0
+php::fpm::settings:
+  PHP/short_open_tag: 'On'
+php::fpm::pools:
+  www:
+    listen: /tmp/php-fpm.sock
+    user: www
+    group: www
+    listen_owner: www
+    listen_group: www
+    pm: static
+    pm_max_children: #fpm_max_children#
+    pm_start_servers:
+    pm_min_spare_servers:
+    pm_max_spare_servers:
+    request_slowlog_timeout: 15s
+    slowlog: /var/log/phpfpm.log.slow
+    chdir: /
+
+php::extensions:
+  opcache: {}
+  curl: {}
+  gettext: {}
+  session: {}
+  zip: {}
+  iconv: {}
+  zlib: {}
+  ctype: {}
+  curl: {}
+  dom: {}
+  fileinfo: {}
+  filter: {}
+  gd: {}
+  intl: {}
+  mbstring: {}
+  mysqli: {}
+  posix: {}
+  readline: {}
+  simplexml: {}
+  soap: {}
+  sockets: {}
+  sqlite3: {}
+  tidy: {}
+  tokenizer: {}
+  xml: {}
+  pdo_mysql: {}
+  pecl-mcrypt: {}
+  pecl-memcache: {}
+
+
+# https://github.com/matomo-org/matomo-nginx/blob/master/sites-available/matomo.conf
+# https://github.com/matomo-org/matomo-nginx#readme
+nginx::events_use: kqueue
+nginx::confd_purge: true
+nginx::daemon_user: www
+nginx::gzip: 'on'
+nginx::gzip_buffers: '16 8k'
+nginx::gzip_comp_level: '4'
+nginx::gzip_disable: 'msie6'
+nginx::gzip_http_version: '1.1'
+nginx::gzip_proxied: 'any'
+#nginx::gzip_types: 'text/plain text/css application/json application/x-javascript text/xml application/xml application/xml+rss text/javascript application/javascript image/svg+xml'
+nginx::gzip_vary: 'on'
+nginx::server_tokens: 'off'
+
+nginx::worker_processes: #nginx_worker_processes#
+nginx::worker_rlimit_nofile: 10240
+nginx::error_log: /var/log/nginx/nginx.err
+nginx::nginx_error_log_severity: error
+nginx::pid: /var/run/nginx.pid
+
+#nginx::sendfile: 'on'
+#nginx::server_tokens: 'on'
+#nginx::spdy2: 'off'
+#nginx::http2: 'off'
+
+nginx::keepalive_timeout: 120
+
+nginx::send_timeout: 60
+nginx::client_body_timeout: 60
+nginx::client_header_timeout: 60
+nginx::client_max_body_size: 1m
+nginx::server_names_hash_max_size: 1000
+nginx::server_names_hash_bucket_size:  512
+nginx::types_hash_max_size: 2048
+
+nginx::nginx_upstreams:
+  'phpfpm':
+    ensure: present
+    members:
+      'phpsock':
+        server: unix:/tmp/php-fpm.sock
+
+nginx::nginx_servers:
+  'matomo':
+    server_name:
+      - _
+    #v6only
+#    listen_ip: '[::]'
+    ipv6_enable: #nginx_ipv6_enable#
+    #ipv6_listen_options: 'default ipv6only=on'
+    #ipv6_listen_options: ''
+    #ipv6_enable: false
+    ssl_redirect: false
+    ssl: false
+    use_default_location: false
+    www_root: '/usr/local/www/matomo'
+    add_header:
+      Referrer-Policy: origin always
+      X-Content-Type-Options: nosniff always
+      X-XSS-Protection: 1; mode=block always
+    index_files:
+      - index.php
+
+
+# ~ ^/(index|matomo|piwik|js/index|plugins/HeatmapSessionRecording/configs)\.php$  ?
+nginx::nginx_locations:
+  'php':
+    location: '~ ^/(index|matomo|piwik|js/index|plugins/HeatmapSessionRecording/configs)\.php$'
+    priority: 402
+    server: matomo
+    www_root: /usr/local/www/matomo
+    add_header:
+      HTTP_PROXY: ""
+    fastcgi: unix:/tmp/php-fpm.sock
+  'deny-php':
+    location: '~* ^.+\.php$'
+    server: matomo
+    location_cfg_append:
+      deny: all
+      return: 403
+  'deny-ht':
+    location: '~ /\.ht$'
+    server: matomo
+    location_cfg_append:
+      deny: all
+      return: 404
+  'preview-js':
+    location: '~ js/container_.*_preview\.js$'
+    server: matomo
+    location_cfg_append:
+      expires: 'off'
+    add_header:
+      Cache-Control: private, no-cache, no-store
+  'static':
+    location: '~ \.(gif|ico|jpg|png|svg|js|css|htm|html|mp3|mp4|wav|ogg|avi|ttf|eot|woff|woff2)$'
+    server: matomo
+    priority: 405
+    location_custom_cfg:
+      allow: 'all'
+      expires: '1h'
+      try_files: '$uri $uri/ =404'
+    add_header:
+      Pragma: public
+      Cache-Control: public
+  'deny-other':
+    location: '~ ^/(libs|vendor|plugins|misc|node_modules)'
+    server: matomo
+    location_cfg_append:
+      deny: all
+      return: 403
+  'plain-data':
+    location: '~/(.*\.md|LEGALNOTICE|LICENSE)'
+    server: matomo
+    location_cfg_append:
+      default_type: text/plain
+
+profiles::db::mysql::db:
+  'matomo-%{::ipaddress}':
+    user: 'matomo'
+    password: '#db_matomo_password#'
+    host: '%{::ipaddress}'
+    grant:
+      - ALL
+  'matomo-127.0.0.1':
+    user: 'matomo'
+    password: '#db_matomo_password#'
+    host: '127.0.0.1'
+    grant:
+      - ALL
+
+mysql::client::package_name: databases/mysql#mysql_ver#-client
+
+profiles::db::mysql::globals:
+  package_name: 'databases/mysql#mysql_ver#-server'
+  create_root_my_cnf: false
+  remove_default_accounts: true
+  restart: true
+
+profiles::db::mysql::options:
+  client:
+    port: #port#
+    socket: #socket#
+  mysqld:
+    socket: #socket#
+    bind-address: #bind_address#
+    skip-networking: '#skip_networking#'
+    expire_logs_days: #expire_logs_days#
+    key_buffer_size: #key_buffer_size#
+    max_allowed_packet: #max_allowed_packet#
+    max_binlog_size: #max_binlog_size#
+    max_connections: #max_connections#
+    thread_cache_size: #thread_cache_size#
+    thread_stack: #thread_stack#
+    sort_buffer_size: #sort_buffer_size#
