@@ -33,6 +33,9 @@ FORM_PATH="${workdir}/formfile"
 /usr/local/bin/cbsd ${miscdir}/updatesql ${FORM_PATH}/${HELPER}.sqlite ${distsharedir}/forms.schema additional_cfg
 /usr/local/bin/cbsd ${miscdir}/updatesql ${FORM_PATH}/${HELPER}.sqlite ${distsharedir}/forms_system.schema system
 
+# not neccesary here
+#INSERT INTO forms ( mytable,group_id,order_id,param,desc,def,cur,new,mandatory,attr,type,link,groupname ) VALUES ( "forms", 1,113,"skip_networking","skip_networking",'false','false','',1, "maxlen=60", "radio", "skip_networking_yesno", "" );
+
 ${SQLITE3_CMD} ${FORM_PATH}/${HELPER}.sqlite << EOF
 BEGIN TRANSACTION;
 INSERT INTO forms ( mytable,group_id,order_id,param,desc,def,cur,new,mandatory,attr,type,link,groupname ) VALUES ( "forms", 1,1,"-Globals","Globals",'Globals','PP','',1, "maxlen=60", "delimer", "", "" );
@@ -49,7 +52,6 @@ INSERT INTO forms ( mytable,group_id,order_id,param,desc,def,cur,new,mandatory,a
 INSERT INTO forms ( mytable,group_id,order_id,param,desc,def,cur,new,mandatory,attr,type,link,groupname ) VALUES ( "forms", 1,108,"max_binlog_size","max_binlog_size",'100M','100M','',1, "maxlen=6", "inputbox", "", "" );
 INSERT INTO forms ( mytable,group_id,order_id,param,desc,def,cur,new,mandatory,attr,type,link,groupname ) VALUES ( "forms", 1,109,"max_connections","max_connections",'151','151','',1, "maxlen=6", "inputbox", "", "" );
 INSERT INTO forms ( mytable,group_id,order_id,param,desc,def,cur,new,mandatory,attr,type,link,groupname ) VALUES ( "forms", 1,110,"port","port",'3306','3306','',1, "maxlen=6", "inputbox", "", "" );
-INSERT INTO forms ( mytable,group_id,order_id,param,desc,def,cur,new,mandatory,attr,type,link,groupname ) VALUES ( "forms", 1,113,"skip_networking","skip_networking",'false','false','',1, "maxlen=60", "radio", "skip_networking_yesno", "" );
 INSERT INTO forms ( mytable,group_id,order_id,param,desc,def,cur,new,mandatory,attr,type,link,groupname ) VALUES ( "forms", 1,114,"socket","socket",'/tmp/mysql.sock','/tmp/mysql.sock','',1, "maxlen=60", "inputbox", "", "" );
 INSERT INTO forms ( mytable,group_id,order_id,param,desc,def,cur,new,mandatory,attr,type,link,groupname ) VALUES ( "forms", 1,115,"sort_buffer_size","sort_buffer_size",'8M','8M','',1, "maxlen=6", "inputbox", "", "" );
 INSERT INTO forms ( mytable,group_id,order_id,param,desc,def,cur,new,mandatory,attr,type,link,groupname ) VALUES ( "forms", 1,116,"thread_cache_size","thread_cache_size",'8','8','',1, "maxlen=6", "inputbox", "", "" );
@@ -57,7 +59,6 @@ INSERT INTO forms ( mytable,group_id,order_id,param,desc,def,cur,new,mandatory,a
 
 INSERT INTO forms ( mytable,group_id,order_id,param,desc,def,cur,new,mandatory,attr,type,link,groupname ) VALUES ( "forms", 1,200,"-PHP","PHP",'PHP','PP','',1, "maxlen=60", "delimer", "", "" );
 INSERT INTO forms ( mytable,group_id,order_id,param,desc,def,cur,new,mandatory,attr,type,link,groupname ) VALUES ( "forms", 1,201,"fpm_max_children","php-fpm max children process",'4','4','',1, "maxlen=6", "inputbox", "", "" );
-INSERT INTO forms ( mytable,group_id,order_id,param,desc,def,cur,new,mandatory,attr,type,link,groupname ) VALUES ( "forms", 1,202,"fpm_max_children","php-fpm max children process",'4','4','',1, "maxlen=6", "inputbox", "", "" );
 INSERT INTO forms ( mytable,group_id,order_id,param,desc,def,cur,new,mandatory,attr,type,link,groupname ) VALUES ( "forms", 1,203,"php_memory_limit","php_memory_limit",'512M','512M','',1, "maxlen=6", "inputbox", "", "" );
 INSERT INTO forms ( mytable,group_id,order_id,param,desc,def,cur,new,mandatory,attr,type,link,groupname ) VALUES ( "forms", 1,204,"php_max_input_time","php_max_input_time",'300','300','',1, "maxlen=6", "inputbox", "", "" );
 INSERT INTO forms ( mytable,group_id,order_id,param,desc,def,cur,new,mandatory,attr,type,link,groupname ) VALUES ( "forms", 1,205,"php_post_max_size","php_post_max_size",'32M','32M','',1, "maxlen=6", "inputbox", "", "" );
@@ -82,9 +83,21 @@ INSERT INTO nginx_ipv6_enable_truefalse ( text, order_id ) VALUES ( "false", 0 )
 COMMIT;
 EOF
 
+
+# yesno
+/usr/local/bin/cbsd ${miscdir}/updatesql ${FORM_PATH}/${HELPER}.sqlite ${distsharedir}/forms_yesno.schema skip_networking_yesno
+# Put boolean for use_sasl_yesno
 ${SQLITE3_CMD} ${FORM_PATH}/${HELPER}.sqlite << EOF
 BEGIN TRANSACTION;
-INSERT INTO system ( helpername, version, packages, have_restart ) VALUES ( "matomo", "201607", "www/matomo", "php-fpm" );
+INSERT INTO skip_networking_yesno ( text, order_id ) VALUES ( "true", 1 );
+INSERT INTO skip_networking_yesno ( text, order_id ) VALUES ( "false", 0 );
+COMMIT;
+EOF
+
+
+${SQLITE3_CMD} ${FORM_PATH}/${HELPER}.sqlite << EOF
+BEGIN TRANSACTION;
+INSERT INTO system ( helpername, version, packages, have_restart ) VALUES ( "matomo", "201607", "www/matomo", "php_fpm" );
 COMMIT;
 EOF
 

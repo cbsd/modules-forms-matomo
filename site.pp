@@ -17,6 +17,7 @@ cat <<EOF
   class { 'nginx': }
   class { 'php': }
   class { 'profiles::db::mysql': }
+  class { 'profile::package': }
 EOF
 }
 
@@ -30,9 +31,21 @@ generate_hieradata()
 		trap "/bin/rm -f ${tmp_common_yaml}" HUP INT ABRT BUS TERM EXIT
 		/bin/cp ${my_common_yaml} ${tmp_common_yaml}
 		for i in ${param}; do
+			case "${i}" in
+				-*)
+					# delimier params
+					continue
+					;;
+				Expand)
+					# delimier params
+					continue
+					;;
+			esac
+
 			eval _val=\${${i}}
 			_tpl="#${i}#"
-			sed -i${sed_delimer}'' -Ees:${_tpl}:${_val}:g ${tmp_common_yaml}
+			# Note that on Linux systems, a space after -i might cause an error
+			sed -i${sed_delimer}'' -Ees:"${_tpl}":"${_val}":g ${tmp_common_yaml}
 		done
 		cat ${tmp_common_yaml}
 	else
