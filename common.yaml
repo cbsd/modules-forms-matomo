@@ -5,11 +5,11 @@ profile::package::entries:
     ensure: "present"
 
 php::globals:
-  php_version: 8.3
+  php_version: 8.2
 
 php::ensure: installed
 php::manage_repos: true
-php::package_prefix: php83-
+php::package_prefix: php82-
 php::fpm: true
 php::dev: true
 php::composer: true
